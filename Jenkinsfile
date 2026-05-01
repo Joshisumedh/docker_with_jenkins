@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // Replace 'your-dockerhub-username' with your actual username
         DOCKER_USER = 'sumedhsj'
         IMAGE_NAME  = "java-hello-world"
         REGISTRY_ID = "my-docker-hub-credentials-id"
@@ -19,7 +18,6 @@ pipeline {
         stage('Docker Build & Tag') {
             steps {
                 echo 'Building and Tagging Image...'
-                // Build with the 'latest' tag and the build number for versioning
                 sh "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:latest ."
                 sh "docker tag ${DOCKER_USER}/${IMAGE_NAME}:latest ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
             }
@@ -27,35 +25,26 @@ pipeline {
 
         stage('Docker Push') {
             steps {
-                // This block securely logs you into DockerHub
                 withCredentials([usernamePassword(credentialsId: REGISTRY_ID, passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER_ENV')]) {
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER_ENV --password-stdin"
-                   
+                    
                     echo 'Pushing Image to DockerHub...'
                     sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
                     sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
-                   
+                    
                     sh "docker logout"
                 }
             }
         }
-    }
 
-    post {
-        success {
-            echo "Successfully pushed ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER} to DockerHub"
-        }
-    }
-}
-
-stage('Deploy to Kubernetes') {
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    // Update the deployment file with the unique build tag 
-                    // This forces K8s to pull the new version instead of staying on 'latest'
-                    sh "sed -i 's|sumedhsj/jenkins_docker_assign:latest|sumedhsj/jenkins_docker_assign:${IMAGE_TAG}|g' deployment.yaml"
+                    echo "Updating deployment.yaml with image tag: ${BUILD_NUMBER}"
+                    // This command searches for the image name in your YAML and replaces it with the new version tag
+                    sh "sed -i 's|${DOCKER_USER}/${IMAGE_NAME}:latest|${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}|g' deployment.yaml"
                     
-                    // Apply the configuration
+                    echo "Applying Kubernetes Configuration..."
                     sh "kubectl apply -f deployment.yaml"
                 }
             }
@@ -65,11 +54,22 @@ stage('Deploy to Kubernetes') {
             steps {
                 script {
                     echo "Waiting for pods to be ready..."
-                    // Wait for the rollout to complete
+                    // Note: Ensure 'hello-jenkins-deployment' matches the 'metadata: name' in your deployment.yaml
                     sh "kubectl rollout status deployment/hello-jenkins-deployment"
                     
-                    // Show running pods
+                    echo "Current Pods:"
                     sh "kubectl get pods -l app=hello-jenkins"
                 }
             }
         }
+    }
+
+    post {
+        success {
+            echo "Successfully pushed and deployed version ${BUILD_NUMBER}!"
+        }
+        failure {
+            echo "Pipeline failed. Check console output for errors."
+        }
+    }
+}
