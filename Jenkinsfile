@@ -55,7 +55,7 @@ pipeline {
                 script {
                     echo "Waiting for pods to be ready..."
                     // Note: Ensure 'hello-jenkins-deployment' matches the 'metadata: name' in your deployment.yaml
-                    sh "kubectl rollout status deployment/hello-jenkins-deployment"
+                    sh "kubectl rollout status deployment/java-hello-world"
                     
                     echo "Current Pods:"
                     sh "kubectl get pods -l app=hello-jenkins"
