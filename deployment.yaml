@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-jenkins-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-jenkins
+  template:
+    metadata:
+      labels:
+        app: hello-jenkins
+    spec:
+      containers:
+      - name: hello-jenkins-container
+        # ACTION REQUIRED: Update with your DockerHub username/repo
+        image: sumedhsj/jenkins_docker_assign:latest
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-jenkins-service
+spec:
+  selector:
+    app: hello-jenkins
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: NodePort

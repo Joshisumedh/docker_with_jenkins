@@ -47,3 +47,29 @@ pipeline {
         }
     }
 }
+
+stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Update the deployment file with the unique build tag 
+                    // This forces K8s to pull the new version instead of staying on 'latest'
+                    sh "sed -i 's|sumedhsj/jenkins_docker_assign:latest|sumedhsj/jenkins_docker_assign:${IMAGE_TAG}|g' deployment.yaml"
+                    
+                    // Apply the configuration
+                    sh "kubectl apply -f deployment.yaml"
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "Waiting for pods to be ready..."
+                    // Wait for the rollout to complete
+                    sh "kubectl rollout status deployment/hello-jenkins-deployment"
+                    
+                    // Show running pods
+                    sh "kubectl get pods -l app=hello-jenkins"
+                }
+            }
+        }
