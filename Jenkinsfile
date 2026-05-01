@@ -55,10 +55,6 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
-                    echo "Waiting for pods to be ready..."
-                    // This name MUST match the 'metadata: name' in your deployment.yaml file
-                    sh "kubectl rollout status deployment/hello-jenkins-deployment"
-                    
                     echo "Current Pods:"
                     // Displays pods associated with your application label
                     sh "kubectl get pods -l app=hello-jenkins"
