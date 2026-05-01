@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        // Your DockerHub username and image details
         DOCKER_USER = 'sumedhsj'
         IMAGE_NAME  = "java-hello-world"
         REGISTRY_ID = "my-docker-hub-credentials-id"
@@ -18,6 +19,7 @@ pipeline {
         stage('Docker Build & Tag') {
             steps {
                 echo 'Building and Tagging Image...'
+                // Build with 'latest' and a unique build number for versioning
                 sh "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:latest ."
                 sh "docker tag ${DOCKER_USER}/${IMAGE_NAME}:latest ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
             }
@@ -28,7 +30,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: REGISTRY_ID, passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER_ENV')]) {
                     sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER_ENV --password-stdin"
                     
-                    echo 'Pushing Image to DockerHub...'
+                    echo 'Pushing Images to DockerHub...'
                     sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
                     sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
                     
@@ -36,11 +38,12 @@ pipeline {
                 }
             }
         }
-stage('Deploy to Kubernetes') {
+
+        stage('Deploy to Kubernetes') {
             steps {
                 script {
                     echo "Updating deployment.yaml with image tag: ${BUILD_NUMBER}"
-                    // This command replaces ':latest' with the current build number
+                    // Search for the 'latest' image string and replace it with the specific build number
                     sh "sed -i 's|${DOCKER_USER}/${IMAGE_NAME}:latest|${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}|g' deployment.yaml"
                     
                     echo "Applying Kubernetes Configuration..."
@@ -53,15 +56,16 @@ stage('Deploy to Kubernetes') {
             steps {
                 script {
                     echo "Waiting for pods to be ready..."
-                    // Corrected the deployment name to match your 'kubectl apply' output
+                    // This name MUST match the 'metadata: name' in your deployment.yaml file
                     sh "kubectl rollout status deployment/hello-jenkins-deployment"
                     
                     echo "Current Pods:"
-                    // This shows pods matching the label defined in your YAML
+                    // Displays pods associated with your application label
                     sh "kubectl get pods -l app=hello-jenkins"
                 }
             }
         }
+    } // End of stages block
 
     post {
         success {
