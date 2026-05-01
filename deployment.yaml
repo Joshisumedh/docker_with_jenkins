@@ -15,7 +15,7 @@ spec:
       containers:
       - name: hello-jenkins-container
         # ACTION REQUIRED: Update with your DockerHub username/repo
-        image: sumedhsj/java-hello-world
+        image: sumedhsj/java-hello-world:latest
         ports:
         - containerPort: 80
 ---
