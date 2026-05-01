@@ -1,25 +1,49 @@
 pipeline {
     agent any
 
+    environment {
+        // Replace 'your-dockerhub-username' with your actual username
+        DOCKER_USER = 'sumedhsj'
+        IMAGE_NAME  = "java-hello-world"
+        REGISTRY_ID = "my-docker-hub-credentials-id"
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout & Compile') {
             steps {
                 checkout scm
+                sh 'javac HelloWorld.java'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Docker Build & Tag') {
             steps {
-                // Build the image and tag it as 'java-hello-world'
-                sh 'docker build -t java-hello-world:latest .'
+                echo 'Building and Tagging Image...'
+                // Build with the 'latest' tag and the build number for versioning
+                sh "docker build -t ${DOCKER_USER}/${IMAGE_NAME}:latest ."
+                sh "docker tag ${DOCKER_USER}/${IMAGE_NAME}:latest ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Docker Push') {
             steps {
-                // Run the container and remove it immediately after execution (--rm)
-                sh 'docker run --rm java-hello-world:latest'
+                // This block securely logs you into DockerHub
+                withCredentials([usernamePassword(credentialsId: REGISTRY_ID, passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER_ENV')]) {
+                    sh "echo \$DOCKER_PASS | docker login -u \$DOCKER_USER_ENV --password-stdin"
+                   
+                    echo 'Pushing Image to DockerHub...'
+                    sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:latest"
+                    sh "docker push ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}"
+                   
+                    sh "docker logout"
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Successfully pushed ${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER} to DockerHub"
         }
     }
 }
