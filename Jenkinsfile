@@ -36,12 +36,11 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy to Kubernetes') {
+stage('Deploy to Kubernetes') {
             steps {
                 script {
                     echo "Updating deployment.yaml with image tag: ${BUILD_NUMBER}"
-                    // This command searches for the image name in your YAML and replaces it with the new version tag
+                    // This command replaces ':latest' with the current build number
                     sh "sed -i 's|${DOCKER_USER}/${IMAGE_NAME}:latest|${DOCKER_USER}/${IMAGE_NAME}:${BUILD_NUMBER}|g' deployment.yaml"
                     
                     echo "Applying Kubernetes Configuration..."
@@ -54,15 +53,15 @@ pipeline {
             steps {
                 script {
                     echo "Waiting for pods to be ready..."
-                    // Note: Ensure 'hello-jenkins-deployment' matches the 'metadata: name' in your deployment.yaml
-                    sh "kubectl rollout status deployment/java-hello-world"
+                    // Corrected the deployment name to match your 'kubectl apply' output
+                    sh "kubectl rollout status deployment/hello-jenkins-deployment"
                     
                     echo "Current Pods:"
+                    // This shows pods matching the label defined in your YAML
                     sh "kubectl get pods -l app=hello-jenkins"
                 }
             }
         }
-    }
 
     post {
         success {
